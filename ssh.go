@@ -7,9 +7,14 @@ import (
 )
 
 const (
+	// HUAWEI 华为
 	HUAWEI = "huawei"
-	H3C    = "h3c"
-	CISCO  = "cisco"
+	// H3C 新华三
+	H3C = "h3c"
+	// CISCO 思科
+	CISCO = "cisco"
+	// TOPSEC 天融信
+	TOPSEC = "topsec"
 )
 
 var IsLogDebug = true
@@ -43,6 +48,11 @@ func RunCommands(user, password, ipPort string, cmds ...string) (string, error) 
  * @author shenbowei
  */
 func RunCommandsWithBrand(user, password, ipPort, brand string, cmds ...string) (string, error) {
+	return RunCommandsWithBrandAndCharset(user, password, ipPort, brand, "utf8", cmds...)
+}
+
+// RunCommandsWithBrandAndCharset 外部调用的统一方法，完成获取会话（若不存在，则会创建连接和会话，并存放入缓存），执行指令的流程，返回执行结果
+func RunCommandsWithBrandAndCharset(user, password, ipPort, brand string, charset string, cmds ...string) (string, error) {
 	sessionKey := user + "_" + password + "_" + ipPort
 	sessionManager.LockSession(sessionKey)
 	defer sessionManager.UnlockSession(sessionKey)
@@ -52,6 +62,7 @@ func RunCommandsWithBrand(user, password, ipPort, brand string, cmds ...string) 
 		LogError("GetSession error:%s", err)
 		return "", err
 	}
+	sshSession.charset = charset
 	sshSession.WriteChannel(cmds...)
 	result := sshSession.ReadChannelTiming(2 * time.Second)
 	filteredResult := filterResult(result, cmds[0])

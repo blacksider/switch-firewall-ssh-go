@@ -114,7 +114,7 @@ func (this *SessionManager) updateSession(user, password, ipPort, brand string) 
  * @author shenbowei
  */
 func (this *SessionManager) initSession(session *SSHSession, brand string) {
-	if brand != HUAWEI && brand != H3C && brand != CISCO {
+	if brand != HUAWEI && brand != H3C && brand != CISCO && brand != TOPSEC {
 		//如果传入的设备型号不匹配则自己获取
 		brand = session.GetSSHBrand()
 	}
