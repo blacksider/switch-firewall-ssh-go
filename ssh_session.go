@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/axgle/mahonia"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -15,6 +16,7 @@ type SSHSession struct {
 	out         chan string  // 绑定了session标准输出的管道
 	brand       string       // 设备厂商
 	lastUseTime time.Time    // 最后的使用时间
+	charset     string       // 编码格式
 }
 
 /**
@@ -163,13 +165,22 @@ func (this *SSHSession) muxShell() error {
 				return
 			}
 			t += n
-			out <- string(buf[:t])
+			out <- outputByCharset(this, buf[:t])
 			t = 0
 		}
 	}()
 	this.in = in
 	this.out = out
 	return nil
+}
+
+func outputByCharset(this *SSHSession, buf []byte) string {
+	if this.charset == "gbk" {
+		coder := mahonia.NewDecoder("gbk")
+		_, cdata, _ := coder.Translate([]byte(string(buf)), true)
+		return string(cdata)
+	}
+	return string(buf)
 }
 
 /**
