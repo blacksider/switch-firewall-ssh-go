@@ -1,23 +1,20 @@
 package ssh
 
 import (
-	"golang.org/x/crypto/ssh"
 	"net"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
-/**
- * 封装的ssh session，包含原生的ssh.Ssssion及其标准的输入输出管道，同时记录最后的使用时间
- * @attr   session:原生的ssh session，in:绑定了session标准输入的管道，out:绑定了session标准输出的管道，lastUseTime:最后的使用时间
- * @author shenbowei
- */
+// SSHSession SSH会话 装的ssh session，包含原生的ssh.Ssssion及其标准的输入输出管道，同时记录最后的使用时间
 type SSHSession struct {
-	session     *ssh.Session
-	in          chan string
-	out         chan string
-	brand       string
-	lastUseTime time.Time
+	session     *ssh.Session // 原生的ssh session
+	in          chan string  // 绑定了session标准输入的管道
+	out         chan string  // 绑定了session标准输出的管道
+	brand       string       // 设备厂商
+	lastUseTime time.Time    // 最后的使用时间
 }
 
 /**
@@ -117,7 +114,7 @@ func (this *SSHSession) muxShell() error {
 		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
 		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
 	}
-	if err := this.session.RequestPty("vt100", 80, 40, modes); err != nil {
+	if err := this.session.RequestPty("vt100", 100, 200, modes); err != nil {
 		LogError("RequestPty error:%s", err)
 		return err
 	}
