@@ -1,12 +1,15 @@
 package ssh
 
 import (
+	"bytes"
+	"io/ioutil"
 	"net"
 	"strings"
 	"time"
 
-	"github.com/axgle/mahonia"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 )
 
 // SSHSession SSH会话 装的ssh session，包含原生的ssh.Ssssion及其标准的输入输出管道，同时记录最后的使用时间
@@ -116,7 +119,7 @@ func (this *SSHSession) muxShell() error {
 		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
 		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
 	}
-	if err := this.session.RequestPty("vt100", 100, 200, modes); err != nil {
+	if err := this.session.RequestPty("vt100", 1000, 10000, modes); err != nil {
 		LogError("RequestPty error:%s", err)
 		return err
 	}
@@ -140,7 +143,7 @@ func (this *SSHSession) muxShell() error {
 			}
 		}()
 		for cmd := range in {
-			_, err := w.Write([]byte(cmd + "\n"))
+			_, err := w.Write(inputByCharset(this, cmd+"\n"))
 			if err != nil {
 				LogDebug("Writer write err:%s", err.Error())
 				return
@@ -172,15 +175,6 @@ func (this *SSHSession) muxShell() error {
 	this.in = in
 	this.out = out
 	return nil
-}
-
-func outputByCharset(this *SSHSession, buf []byte) string {
-	if this.charset == "gbk" {
-		coder := mahonia.NewDecoder("gbk")
-		_, cdata, _ := coder.Translate([]byte(string(buf)), true)
-		return string(cdata)
-	}
-	return string(buf)
 }
 
 /**
@@ -374,4 +368,60 @@ func (this *SSHSession) readChannelData() string {
 			return output
 		}
 	}
+}
+
+// transform GBK bytes to UTF-8 bytes
+func gbkToUtf8(str []byte) (b []byte, err error) {
+	r := transform.NewReader(bytes.NewReader(str), simplifiedchinese.GBK.NewDecoder())
+	b, err = ioutil.ReadAll(r)
+	if err != nil {
+		return
+	}
+	return
+}
+
+// transform UTF-8 bytes to GBK bytes
+func utf8ToGbk(str []byte) (b []byte, err error) {
+	r := transform.NewReader(bytes.NewReader(str), simplifiedchinese.GBK.NewEncoder())
+	b, err = ioutil.ReadAll(r)
+	if err != nil {
+		return
+	}
+	return
+}
+
+// transform GBK string to UTF-8 string and replace it, if transformed success, returned nil error, or died by error message
+func strToUtf8(str *string) error {
+	b, err := gbkToUtf8([]byte(*str))
+	if err != nil {
+		return err
+	}
+	*str = string(b)
+	return nil
+}
+
+// transform UTF-8 string to GBK string and replace it, if transformed success, returned nil error, or died by error message
+func strToGBK(str *string) error {
+	b, err := utf8ToGbk([]byte(*str))
+	if err != nil {
+		return err
+	}
+	*str = string(b)
+	return nil
+}
+
+func inputByCharset(this *SSHSession, cmd string) []byte {
+	if this.charset == "gbk" {
+		byteArray, _ := utf8ToGbk([]byte(cmd))
+		return byteArray
+	}
+	return []byte(cmd)
+}
+
+func outputByCharset(this *SSHSession, buf []byte) string {
+	if this.charset == "gbk" {
+		byteArray, _ := gbkToUtf8(buf)
+		return string(byteArray)
+	}
+	return string(buf)
 }
