@@ -72,7 +72,7 @@ func (this *SSHSession) UpdateLastUseTime() {
  */
 func (this *SSHSession) createConnection(user, password, ipPort string) error {
 	LogDebug("<Test> Begin connect")
-	client, err := ssh.Dial("tcp", ipPort, &ssh.ClientConfig{
+	clientConfig := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
@@ -85,8 +85,10 @@ func (this *SSHSession) createConnection(user, password, ipPort string) error {
 			Ciphers: []string{"aes128-ctr", "aes192-ctr", "aes256-ctr", "aes128-gcm@openssh.com",
 				"arcfour256", "arcfour128", "aes128-cbc", "aes256-cbc", "3des-cbc", "des-cbc",
 			},
+			KeyExchanges: []string{"diffie-hellman-group-exchange-sha1", "diffie-hellman-group1-sha1"},
 		},
-	})
+	}
+	client, err := ssh.Dial("tcp", ipPort, clientConfig)
 	if err != nil {
 		LogError("SSH Dial err:%s", err.Error())
 		return err
